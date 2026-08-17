@@ -9,6 +9,9 @@ Built with Electron, React and Vite. No component library, plain CSS.
 ## What it does
 
 - Save a list of apps: name, project folder, command, optional env vars, optional autostart
+- Group sub-applications under one application, and start or stop the whole group
+- Global folder for commands not tied to a project: leave the folder empty and the
+  command runs there
 - Start and stop each app from a single button, with live status: stopped, running, exited(code)
 - Live stdout and stderr in a log pane, with ANSI colour rendered rather than printed raw
 - Logs keep accumulating for every running app in the background, not only the visible one
@@ -49,23 +52,36 @@ Output lands in `release/`. Windows installers must be built on Windows, or in a
 Windows CI runner. Add your own icons at `build/icon.icns` and `build/icon.ico`
 to replace the Electron defaults.
 
-## Tests
-
-```bash
-npm test
-```
-
-Runs a headless suite against the process manager: chunk splitting, env
-handling, ring-buffer cap, spawn-failure handling, and process-tree kill
-(it spawns a grandchild process and asserts it does not survive a stop).
-
 ## Adding an app
 
 1. Press **Add app**
 2. Name it, **Browse** to the project folder, type the command, for example `npm run dev`
-3. Optionally add env vars as key/value rows, applied on top of the inherited environment
-4. Optionally tick autostart
-5. Save, then press **Start**
+3. Optionally put it under an **Application**, so several sub-applications
+   (web, api, worker) group together and can be started as one
+4. Optionally add env vars as key/value rows, applied on top of the inherited environment
+5. Optionally tick autostart
+6. Save, then press **Start**
+
+Leave the project folder empty for a global command. It then runs in the global
+folder, which you set from the **Global folder** button in the title bar. It
+defaults to your home directory.
+
+Each group heading has its own Start and Stop, and each entry keeps its own
+Start and Stop, so you can run the whole application or just one piece of it.
+
+## Tests
+
+Two suites, both headless:
+
+```bash
+npm test          # process manager: spawning, line splitting, tree kill
+npm run test:e2e  # drives the real window with Playwright
+```
+
+`npm run test:e2e` builds the renderer, launches the actual app against a
+throwaway config directory, adds an app through the form, starts it, reads the
+log pane, detaches the log window, stops it, quits, and relaunches to confirm
+persistence. Screenshots land in `shots/`.
 
 ## Notes on how the process handling works
 

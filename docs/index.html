@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kai, a dev server launcher</title>
+<meta name="description" content="Kai is a personal dev-server launcher for macOS and Windows. Save your projects once, start them with one click." />
+<style>
+  :root {
+    --bg: #ffffff;
+    --cream: #faf6ea;
+    --cream-deep: #f3eedd;
+    --border: #e6dfcb;
+    --border-strong: #d2c8ab;
+    --text: #1d2b21;
+    --dim: #6d7d71;
+    --green: #2e8b57;
+    --green-hover: #26744a;
+    --ink: #ffffff;
+    --term-bg: #0f1511;
+    --term-text: #eae3d4;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1511;
+      --cream: #161e18;
+      --cream-deep: #0a0f0b;
+      --border: #263029;
+      --border-strong: #384539;
+      --text: #f0e9da;
+      --dim: #9aa89c;
+      --green: #5ad18b;
+      --green-hover: #74e0a0;
+      --ink: #07130c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+  header {
+    background: var(--cream);
+    border-bottom: 1px solid var(--border);
+    padding: 72px 0 64px;
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    margin-bottom: 22px;
+  }
+  .mark {
+    display: grid; place-items: center;
+    width: 42px; height: 42px;
+    border-radius: 11px;
+    background: linear-gradient(150deg, var(--green), #8fd18a);
+    color: var(--ink);
+    font-weight: 700; font-size: 21px;
+  }
+  h1 { font-size: 42px; line-height: 1.1; margin: 0 0 14px; letter-spacing: -0.5px; }
+  .lede { font-size: 19px; color: var(--dim); margin: 0 0 30px; max-width: 44ch; }
+
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn {
+    display: inline-block;
+    padding: 11px 20px;
+    border-radius: 9px;
+    border: 1px solid var(--border-strong);
+    background: var(--bg);
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 600;
+    transition: background .15s, border-color .15s;
+  }
+  .btn:hover { border-color: var(--green); }
+  .btn.primary { background: var(--green); border-color: var(--green); color: var(--ink); }
+  .btn.primary:hover { background: var(--green-hover); border-color: var(--green-hover); }
+
+  section { padding: 60px 0; border-bottom: 1px solid var(--border); }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.1px; color: var(--green); margin: 0 0 26px; }
+  h3 { font-size: 17px; margin: 0 0 6px; }
+
+  .grid { display: grid; gap: 26px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+  .card {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card p { margin: 0; color: var(--dim); font-size: 15px; }
+
+  pre {
+    background: var(--term-bg);
+    color: var(--term-text);
+    border-radius: 12px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.7;
+    margin: 0;
+  }
+  pre .c { color: #93a396; }
+  pre .g { color: #98c379; }
+  code { font-family: var(--mono); font-size: 0.9em; background: var(--cream-deep); padding: 2px 5px; border-radius: 4px; }
+
+  .problems { display: grid; gap: 18px; }
+  .problem {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 18px;
+    padding-bottom: 18px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .problem:last-child { border-bottom: none; padding-bottom: 0; }
+  .problem strong { color: var(--text); }
+  .problem p { margin: 0; color: var(--dim); font-size: 15px; }
+  @media (max-width: 640px) {
+    .problem { grid-template-columns: 1fr; gap: 6px; }
+    h1 { font-size: 32px; }
+  }
+
+  footer { padding: 36px 0 60px; color: var(--dim); font-size: 14px; }
+  footer a { color: var(--green); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="badge"><span class="mark">K</span></div>
+    <h1>Start your dev servers<br />with one click.</h1>
+    <p class="lede">
+      Kai is a small desktop app that remembers your projects and their commands,
+      so you stop opening terminals and retyping the same thing every morning.
+    </p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/omthorat2004/Kai">View on GitHub</a>
+      <a class="btn" href="https://github.com/omthorat2004/Kai#setup">Setup</a>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>What it does</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Save once, click forever</h3>
+        <p>Name, folder, command, env vars, autostart. A native folder picker, and config that survives restarts.</p>
+      </div>
+      <div class="card">
+        <h3>Live logs</h3>
+        <p>stdout and stderr in real time, ANSI colour rendered rather than printed raw, stderr visually distinct.</p>
+      </div>
+      <div class="card">
+        <h3>Nothing gets lost</h3>
+        <p>Every running app keeps buffering in the background, not only the one you are looking at. 5000 lines each.</p>
+      </div>
+      <div class="card">
+        <h3>Second monitor</h3>
+        <p>Detach any app's logs into their own window and park it wherever you like.</p>
+      </div>
+      <div class="card">
+        <h3>Groups</h3>
+        <p>One application can hold several sub-applications. Start the whole monorepo, or just the API.</p>
+      </div>
+      <div class="card">
+        <h3>Global commands</h3>
+        <p>Entries without a folder of their own run in a global folder you configure, for anything not tied to a project.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Get it running</h2>
+    <pre><span class="c"># clone and install</span>
+git clone https://github.com/omthorat2004/Kai.git
+<span class="g">cd</span> Kai
+npm install
+
+<span class="c"># develop, Vite plus Electron with hot reload</span>
+npm run dev
+
+<span class="c"># package a dmg or an nsis installer</span>
+npm run build:mac
+npm run build:win</pre>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>The hard parts, handled</h2>
+    <div class="problems">
+      <div class="problem">
+        <strong>PATH on macOS</strong>
+        <p>A double-clicked app inherits launchd's environment, not your shell's, so <code>npm</code> is simply missing. Kai spawns through a login shell, so nvm and Homebrew paths apply.</p>
+      </div>
+      <div class="problem">
+        <strong>Orphaned servers</strong>
+        <p><code>child.kill()</code> kills the shell and leaves the dev server holding the port. Kai kills the whole process group, escalating to SIGKILL, and <code>taskkill /T /F</code> on Windows.</p>
+      </div>
+      <div class="problem">
+        <strong>Chunked output</strong>
+        <p>A <code>data</code> event can carry three lines or half of one. Kai buffers per stream and keeps the incomplete tail for the next chunk.</p>
+      </div>
+      <div class="problem">
+        <strong>Scroll that behaves</strong>
+        <p>Auto-scroll engages only when you are already at the bottom, so scrolling up to read a stack trace never yanks you back down.</p>
+      </div>
+      <div class="problem">
+        <strong>Clean exit</strong>
+        <p>Every child is killed before the app quits, so closing Kai never leaves a server running in the background.</p>
+      </div>
+      <div class="problem">
+        <strong>Locked-down renderer</strong>
+        <p><code>contextIsolation: true</code>, <code>nodeIntegration: false</code>, no <code>ipcRenderer</code> in the page. One narrow preload bridge, and a strict CSP in the packaged build.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    MIT licensed. Built with Electron, React and Vite.
+    <a href="https://github.com/omthorat2004/Kai">Source on GitHub</a>.
+  </div>
+</footer>
+
+</body>
+</html>
