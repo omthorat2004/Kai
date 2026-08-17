@@ -26,6 +26,8 @@ export default function App() {
   const [meta, setMeta] = useState(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState('');
+  const [settings, setSettings] = useState({ globalCwd: '' });
+  const [showSettings, setShowSettings] = useState(false);
 
   const flash = useCallback((msg) => {
     setToast(msg);
@@ -40,13 +42,15 @@ export default function App() {
   // Initial load and persisted selection.
   useEffect(() => {
     (async () => {
-      const [list, ui, m] = await Promise.all([
+      const [list, ui, m, s] = await Promise.all([
         window.kai.apps.list(),
         window.kai.ui.get(),
         window.kai.meta(),
+        window.kai.settings.get(),
       ]);
       setApps(list);
       setMeta(m);
+      setSettings(s);
       const wanted = list.find((a) => a.id === ui.selectedId) || list[0];
       setSelectedId(wanted ? wanted.id : null);
       await refreshStatuses();
@@ -59,7 +63,8 @@ export default function App() {
       setStatuses((prev) => ({ ...prev, [s.id]: s }))
     );
     const offApps = window.kai.onApps((list) => setApps(list));
-    return () => { offStatus(); offApps(); };
+    const offSettings = window.kai.onSettings((s) => setSettings(s));
+    return () => { offStatus(); offApps(); offSettings(); };
   }, []);
 
   useEffect(() => {
@@ -77,6 +82,25 @@ export default function App() {
   );
 
   const isRunning = (id) => ['running', 'starting', 'stopping'].includes(statuses[id]?.status);
+
+  // One application can hold several sub-applications. Entries with no group
+  // land in a trailing bucket of their own.
+  const grouped = useMemo(() => {
+    const map = new Map();
+    for (const app of apps) {
+      const key = app.group || '';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(app);
+    }
+    const named = [...map.entries()].filter(([k]) => k).sort((a, b) => a[0].localeCompare(b[0]));
+    const loose = map.get('') || [];
+    return loose.length ? [...named, ['', loose]] : named;
+  }, [apps]);
+
+  const groupNames = useMemo(
+    () => [...new Set(apps.map((a) => a.group).filter(Boolean))].sort(),
+    [apps]
+  );
 
   const toggle = async (app) => {
     if (isRunning(app.id)) {
@@ -132,6 +156,7 @@ export default function App() {
         <div className="titlebar-actions">
           <button className="btn" onClick={startAll} disabled={busy || !apps.length}>Start all</button>
           <button className="btn" onClick={stopAll} disabled={busy || !runningCount}>Stop all</button>
+          <button className="btn" onClick={() => setShowSettings(true)}>Global folder</button>
           <button className="btn primary" onClick={() => setEditing({})}>Add app</button>
         </div>
       </header>
@@ -145,7 +170,31 @@ export default function App() {
             </div>
           )}
 
-          {apps.map((app) => {
+          {grouped.map(([groupName, members]) => {
+            const runningHere = members.filter((m) => isRunning(m.id)).length;
+            return (
+              <div className="group" key={groupName || '__loose__'}>
+                <div className="group-head">
+                  <span className="group-name">{groupName || 'Standalone'}</span>
+                  <span className="group-count">{runningHere}/{members.length}</span>
+                  <button
+                    className="btn ghost tiny"
+                    title={`Start every sub-application in ${groupName || 'Standalone'}`}
+                    onClick={() => window.kai.startGroup(groupName).then(refreshStatuses)}
+                  >
+                    Start
+                  </button>
+                  <button
+                    className="btn ghost tiny"
+                    disabled={!runningHere}
+                    title={`Stop every sub-application in ${groupName || 'Standalone'}`}
+                    onClick={() => window.kai.stopGroup(groupName).then(refreshStatuses)}
+                  >
+                    Stop
+                  </button>
+                </div>
+
+          {members.map((app) => {
             const st = statuses[app.id];
             const running = isRunning(app.id);
             return (
@@ -160,7 +209,9 @@ export default function App() {
                   {app.autostart && <span className="tag" title="Starts with Kai">auto</span>}
                 </div>
                 <div className="app-cmd" title={app.command}>{app.command}</div>
-                <div className="app-cwd" title={app.cwd}>{app.cwd}</div>
+                <div className="app-cwd" title={app.cwd || settings.globalCwd}>
+                  {app.cwd || `${settings.globalCwd} · global`}
+                </div>
                 <div className="app-status">{statusLabel(st)}{st?.pid ? ` · pid ${st.pid}` : ''}</div>
                 <div className="app-card-actions" onClick={(e) => e.stopPropagation()}>
                   <button
@@ -172,6 +223,9 @@ export default function App() {
                   <button className="btn ghost" onClick={() => setEditing(app)}>Edit</button>
                   <button className="btn ghost" onClick={() => setConfirmDelete(app)}>Delete</button>
                 </div>
+              </div>
+            );
+          })}
               </div>
             );
           })}
@@ -202,9 +256,51 @@ export default function App() {
       {editing && (
         <AppForm
           initial={editing}
+          groups={groupNames}
+          globalCwd={settings.globalCwd}
           onSave={save}
           onCancel={() => setEditing(null)}
         />
+      )}
+
+      {showSettings && (
+        <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setShowSettings(false)}>
+          <div className="modal small">
+            <h2>Global folder</h2>
+            <p className="muted">
+              Where an app runs when it has no folder of its own. Use it for commands
+              that are not tied to a project.
+            </p>
+            <div className="row">
+              <input
+                value={settings.globalCwd || ''}
+                onChange={(e) => setSettings((s) => ({ ...s, globalCwd: e.target.value }))}
+              />
+              <button
+                className="btn"
+                onClick={async () => {
+                  const dir = await window.kai.pickDirectory(settings.globalCwd);
+                  if (dir) setSettings((s) => ({ ...s, globalCwd: dir }));
+                }}
+              >
+                Browse
+              </button>
+            </div>
+            <div className="modal-actions">
+              <button className="btn ghost" onClick={() => setShowSettings(false)}>Cancel</button>
+              <button
+                className="btn primary"
+                onClick={async () => {
+                  const next = await window.kai.settings.set({ globalCwd: settings.globalCwd });
+                  setSettings(next);
+                  setShowSettings(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {confirmDelete && (

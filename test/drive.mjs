@@ -242,6 +242,88 @@ const clickText = (page, text) =>
   });
   check('env vars persisted', envPersisted.KAI_TEST_VAR === 'from-the-ui', JSON.stringify(envPersisted));
 
+  // ------------------------- groups of sub-applications + the global folder
+  const testDir = path.join(APP_DIR, 'test');
+  await page.evaluate(async (dir) => {
+    await window.kai.settings.set({ globalCwd: dir });
+    const [first] = await window.kai.apps.list();
+    // Put the existing app into a group, then add a second sub-application
+    // with no folder of its own: it must run in the global folder.
+    await window.kai.apps.save({ ...first, group: 'Acme monorepo' });
+    await window.kai.apps.save({
+      name: 'Global command',
+      group: 'Acme monorepo',
+      cwd: '',
+      command: 'node fake-server.js',
+    });
+  }, testDir);
+
+  await page.waitForFunction(() => document.querySelectorAll('.app-card').length === 2, null, { timeout: 5000 });
+  const groupHeads = await page.locator('.group-head').count();
+  check('sub-applications collapse into one group', groupHeads === 1, `${groupHeads} group heading(s)`);
+  const groupName = await page.locator('.group-name').innerText();
+  check('group is named', groupName === 'ACME MONOREPO', groupName);
+
+  const globalShown = await page.evaluate(() =>
+    [...document.querySelectorAll('.app-cwd')].map((e) => e.innerText).find((t) => t.includes('global'))
+  );
+  check('app with no folder shows the global folder', !!globalShown, globalShown);
+
+  // Start the whole application (every sub-application at once).
+  await page.evaluate(() => {
+    const head = document.querySelector('.group-head');
+    [...head.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Start').click();
+  });
+  await page.waitForFunction(
+    () => [...document.querySelectorAll('.app-status')].filter((e) => /running/.test(e.innerText)).length === 2,
+    null,
+    { timeout: 15_000 }
+  );
+  check('group start ran every sub-application', true, '2 running');
+  await page.screenshot({ path: path.join(SHOTS, '07-group-running.png') });
+
+  await sleep(900);
+  const globalCwdLine = await page.evaluate(async () => {
+    const apps = await window.kai.apps.list();
+    const global = apps.find((a) => !a.cwd);
+    const lines = await window.kai.logs.get(global.id);
+    return (lines.find((l) => l.text.startsWith('CWD=')) || {}).text;
+  });
+  check('global command ran in the global folder', globalCwdLine === `CWD=${testDir}`, String(globalCwdLine));
+
+  // Stopping one sub-application must not touch its siblings.
+  await page.evaluate(() => {
+    const card = [...document.querySelectorAll('.app-card')].find((c) =>
+      c.querySelector('.app-name').innerText === 'Global command'
+    );
+    [...card.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Stop').click();
+  });
+  await sleep(2000);
+  const mixed = await page.evaluate(() =>
+    [...document.querySelectorAll('.app-card')].map((c) => ({
+      name: c.querySelector('.app-name').innerText,
+      status: c.querySelector('.app-status').innerText,
+    }))
+  );
+  const sibling = mixed.find((m) => m.name === 'Fake dev server');
+  const stopped = mixed.find((m) => m.name === 'Global command');
+  check(
+    'stopping one sub-application leaves its siblings running',
+    /running/.test(sibling.status) && /exited/.test(stopped.status),
+    JSON.stringify(mixed)
+  );
+
+  await page.evaluate(() => {
+    const head = document.querySelector('.group-head');
+    [...head.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Stop').click();
+  });
+  await page.waitForFunction(
+    () => [...document.querySelectorAll('.app-status')].every((e) => !/running/.test(e.innerText)),
+    null,
+    { timeout: 15_000 }
+  );
+  check('group stop stopped everything', true);
+
   // Renderer isolation: the sandbox must not leak node into the page.
   const isolation = await page.evaluate(() => ({
     require: typeof window.require,

@@ -95,8 +95,10 @@ pm.on('cleared', (payload) => broadcast('kai:cleared', payload));
 function startApp(id) {
   const cfg = store.get(id);
   if (!cfg) return { ok: false, error: 'No such app' };
-  if (!cfg.cwd || !cfg.command) return { ok: false, error: 'App needs both a folder and a command' };
-  pm.start(cfg);
+  if (!cfg.command) return { ok: false, error: `${cfg.name} has no command` };
+  // No folder of its own means it is a global command: run it in the
+  // configured global folder.
+  pm.start({ ...cfg, cwd: store.resolveCwd(cfg) });
   return { ok: true, status: pm.statusOf(id) };
 }
 
@@ -152,6 +154,25 @@ ipcMain.handle('kai:startAll', () => {
 ipcMain.handle('kai:stopAll', async () => {
   await pm.stopAll();
   return { ok: true };
+});
+
+// A "group" is one application made of several sub-applications.
+ipcMain.handle('kai:startGroup', (_e, group) => {
+  const members = store.list().filter((a) => (a.group || '') === (group || ''));
+  return members.map((a) => ({ id: a.id, ...startApp(a.id) }));
+});
+
+ipcMain.handle('kai:stopGroup', async (_e, group) => {
+  const members = store.list().filter((a) => (a.group || '') === (group || ''));
+  await Promise.all(members.map((a) => pm.stop(a.id)));
+  return { ok: true };
+});
+
+ipcMain.handle('kai:settings:get', () => store.getSettings());
+ipcMain.handle('kai:settings:set', (_e, patch) => {
+  const next = store.setSettings(patch);
+  broadcast('kai:settings', next);
+  return next;
 });
 
 ipcMain.handle('kai:statuses', () => {

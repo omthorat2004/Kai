@@ -5,11 +5,15 @@
 
 const Store = require('electron-store');
 const crypto = require('crypto');
+const os = require('os');
 
 const store = new Store({
   name: 'kai',
   defaults: {
     apps: [],
+    // globalCwd is the working folder for entries that are not tied to a
+    // project, so "global" commands need no folder of their own.
+    settings: { globalCwd: os.homedir() },
     ui: { selectedId: null, windowBounds: { width: 1120, height: 720 } },
   },
 });
@@ -30,6 +34,9 @@ function normalise(input, existing = {}) {
   return {
     id: input.id || existing.id || crypto.randomUUID(),
     name: String(input.name ?? existing.name ?? '').trim() || 'Untitled',
+    // Optional parent application. Several sub-applications (web, api,
+    // worker) can share one group and be started or stopped together.
+    group: String(input.group ?? existing.group ?? '').trim(),
     cwd: String(input.cwd ?? existing.cwd ?? '').trim(),
     command: String(input.command ?? existing.command ?? '').trim(),
     env,
@@ -71,6 +78,21 @@ const api = {
     for (const a of byId.values()) if (!ids.includes(a.id)) next.push(a);
     store.set('apps', next);
     return next;
+  },
+
+  getSettings() {
+    const s = store.get('settings', {});
+    return { globalCwd: s.globalCwd || os.homedir() };
+  },
+
+  setSettings(patch) {
+    store.set('settings', { ...api.getSettings(), ...patch });
+    return api.getSettings();
+  },
+
+  /** Where a given app should run: its own folder, else the global one. */
+  resolveCwd(app) {
+    return (app && app.cwd && app.cwd.trim()) || api.getSettings().globalCwd;
   },
 
   getUi() {

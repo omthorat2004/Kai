@@ -36,7 +36,14 @@ const api = {
   stop: (id) => ipcRenderer.invoke('kai:stop', id),
   startAll: () => ipcRenderer.invoke('kai:startAll'),
   stopAll: () => ipcRenderer.invoke('kai:stopAll'),
+  startGroup: (group) => ipcRenderer.invoke('kai:startGroup', group),
+  stopGroup: (group) => ipcRenderer.invoke('kai:stopGroup', group),
   statuses: () => ipcRenderer.invoke('kai:statuses'),
+
+  settings: {
+    get: () => ipcRenderer.invoke('kai:settings:get'),
+    set: (patch) => ipcRenderer.invoke('kai:settings:set', patch),
+  },
 
   logs: {
     get: (id) => ipcRenderer.invoke('kai:logs:get', id),
@@ -55,6 +62,7 @@ const api = {
   onStatus: (cb) => subscribe('kai:status', cb),
   onCleared: (cb) => subscribe('kai:cleared', cb),
   onApps: (cb) => subscribe('kai:apps', cb),
+  onSettings: (cb) => subscribe('kai:settings', cb),
 };
 
 contextBridge.exposeInMainWorld('kai', api);

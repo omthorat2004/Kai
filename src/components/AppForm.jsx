@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 
-const blank = { name: '', cwd: '', command: '', autostart: false };
+const blank = { name: '', group: '', cwd: '', command: '', autostart: false };
 
 function envToRows(env) {
   const rows = Object.entries(env || {}).map(([key, value]) => ({ key, value }));
   return rows.length ? rows : [{ key: '', value: '' }];
 }
 
-export default function AppForm({ initial, onSave, onCancel }) {
+export default function AppForm({ initial, onSave, onCancel, groups = [], globalCwd = '' }) {
   const [form, setForm] = useState(blank);
   const [rows, setRows] = useState(envToRows());
   const [error, setError] = useState('');
@@ -31,8 +31,8 @@ export default function AppForm({ initial, onSave, onCancel }) {
   const submit = (e) => {
     e.preventDefault();
     if (!form.name.trim()) return setError('Give it a name.');
-    if (!form.cwd.trim()) return setError('Pick a project folder.');
     if (!form.command.trim()) return setError('Enter a command, for example: npm run dev');
+    // The folder is optional: empty means run in the global folder.
     onSave({ ...form, env: rows.filter((r) => r.key.trim()) });
   };
 
@@ -52,14 +52,30 @@ export default function AppForm({ initial, onSave, onCancel }) {
         </label>
 
         <label>
-          <span>Project folder</span>
+          <span>Application <em>optional, groups sub-applications together</em></span>
+          <input
+            list="kai-groups"
+            value={form.group}
+            placeholder="Acme monorepo"
+            onChange={(e) => set({ group: e.target.value })}
+          />
+          <datalist id="kai-groups">
+            {groups.map((g) => <option key={g} value={g} />)}
+          </datalist>
+        </label>
+
+        <label>
+          <span>Project folder <em>leave empty to use the global folder</em></span>
           <div className="row">
             <input
               value={form.cwd}
-              placeholder="/Users/you/projects/storefront"
+              placeholder={globalCwd ? `${globalCwd} (global)` : '/Users/you/projects/storefront'}
               onChange={(e) => set({ cwd: e.target.value })}
             />
             <button type="button" className="btn" onClick={browse}>Browse</button>
+            {form.cwd ? (
+              <button type="button" className="btn ghost" onClick={() => set({ cwd: '' })}>Clear</button>
+            ) : null}
           </div>
         </label>
 
