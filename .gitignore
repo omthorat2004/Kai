@@ -17,3 +17,7 @@ Thumbs.db
 npm-debug.log*
 .vscode/
 .idea/
+
+# e2e artifacts
+shots/
+.e2e-userdata/
