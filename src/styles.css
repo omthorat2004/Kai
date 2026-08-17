@@ -102,6 +102,17 @@ button, input { font-family: inherit; font-size: inherit; color: inherit; }
 
 .titlebar-actions { display: flex; gap: 8px; }
 
+.update-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  background: color-mix(in srgb, var(--green) 14%, var(--bg));
+  border-bottom: 1px solid color-mix(in srgb, var(--green) 35%, transparent);
+  font-size: 12px;
+}
+.update-bar span { flex: 1; }
+
 /* --------------------------------------------------------------- layout */
 
 .body { display: flex; flex: 1; min-height: 0; }

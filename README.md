@@ -20,6 +20,42 @@ Built with Electron, React and Vite. No component library, plain CSS.
 - Native folder picker for the project folder
 - Config persists across restarts via electron-store
 
+## Download
+
+Grab the latest build from the
+[releases page](https://github.com/omthorat2004/Kai/releases/latest).
+
+- Apple Silicon: `Kai-<version>-arm64.dmg`
+- Intel Mac: `Kai-<version>-x64.dmg`
+
+Open the dmg and drag Kai to Applications.
+
+**First launch on macOS.** These builds are not signed with an Apple Developer
+ID, so Gatekeeper will refuse the first open with a warning that the app cannot
+be checked for malicious software. Right-click the app and choose **Open**, then
+confirm. You only do this once. If macOS insists the app is damaged, clear the
+quarantine flag:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Kai.app
+```
+
+## Updating
+
+Kai checks the GitHub releases feed a few seconds after launch and shows a bar
+at the top when a newer version exists. There is also a **Check for updates**
+button in the status bar. Both open the release page so you can download the new
+dmg and replace the app.
+
+Updates are notify-only on purpose. Silent in-place updates on macOS require the
+app to be signed and notarised with an Apple Developer ID, and Squirrel refuses
+to update an unsigned build. Once this app has a signing certificate, swap
+`electron/updater.js` for `electron-updater` and the same release feed keeps
+working unchanged.
+
+Your saved apps live in `~/Library/Application Support/Kai/kai.json`, outside the
+app bundle, so replacing the app never loses your configuration.
+
 ## Setup
 
 Requires Node 18 or newer.
@@ -48,9 +84,21 @@ npm run build:win   # nsis installer
 npm run build       # current platform
 ```
 
-Output lands in `release/`. Windows installers must be built on Windows, or in a
-Windows CI runner. Add your own icons at `build/icon.icns` and `build/icon.ico`
-to replace the Electron defaults.
+Output lands in `release/`. The mac target builds both arm64 and x64 dmgs.
+Windows installers must be built on Windows, or in a Windows CI runner. Add your
+own icons at `build/icon.icns` and `build/icon.ico` to replace the Electron
+defaults.
+
+To cut a new release: bump `version` in `package.json`, build, then upload the
+artifacts and the installed copies will see the update on their next launch.
+
+```bash
+npm version patch
+npm run build:mac
+gh release create "v$(node -p "require('./package.json').version")" \
+  release/*.dmg --title "Kai $(node -p "require('./package.json').version")" \
+  --notes "What changed"
+```
 
 ## Adding an app
 

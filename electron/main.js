@@ -4,6 +4,7 @@ const path = require('path');
 const { app, BrowserWindow, ipcMain, dialog, clipboard, shell } = require('electron');
 const store = require('./store');
 const { ProcessManager } = require('./process-manager');
+const { checkForUpdate } = require('./updater');
 
 const DEV_SERVER = process.env.KAI_DEV_SERVER || null;
 const RENDERER_FILE = path.join(__dirname, '..', 'dist', 'index.html');
@@ -168,6 +169,12 @@ ipcMain.handle('kai:stopGroup', async (_e, group) => {
   return { ok: true };
 });
 
+ipcMain.handle('kai:checkUpdate', () => checkForUpdate(app.getVersion()));
+ipcMain.handle('kai:openExternal', (_e, url) => {
+  if (/^https:\/\/github\.com\//.test(String(url || ''))) shell.openExternal(url);
+  return true;
+});
+
 ipcMain.handle('kai:settings:get', () => store.getSettings());
 ipcMain.handle('kai:settings:set', (_e, patch) => {
   const next = store.setSettings(patch);
@@ -217,6 +224,13 @@ if (!app.requestSingleInstanceLock()) {
     for (const a of store.list()) {
       if (a.autostart) startApp(a.id);
     }
+
+    // Quiet background check a few seconds after launch. Failure is silent:
+    // being offline is not an error worth interrupting anyone over.
+    setTimeout(async () => {
+      const result = await checkForUpdate(app.getVersion());
+      if (result.available) broadcast('kai:update', result);
+    }, 5000);
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow();

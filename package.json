@@ -45,12 +45,26 @@
       "dist/**/*",
       "package.json"
     ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "omthorat2004",
+        "repo": "Kai"
+      }
+    ],
     "mac": {
       "target": [
-        "dmg"
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
       ],
       "category": "public.app-category.developer-tools",
-      "artifactName": "Kai-${version}-${arch}.${ext}"
+      "artifactName": "Kai-${version}-${arch}.${ext}",
+      "identity": null
     },
     "dmg": {
       "title": "Kai ${version}"

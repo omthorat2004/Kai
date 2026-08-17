@@ -28,6 +28,8 @@ export default function App() {
   const [toast, setToast] = useState('');
   const [settings, setSettings] = useState({ globalCwd: '' });
   const [showSettings, setShowSettings] = useState(false);
+  const [update, setUpdate] = useState(null);
+  const [checking, setChecking] = useState(false);
 
   const flash = useCallback((msg) => {
     setToast(msg);
@@ -64,7 +66,8 @@ export default function App() {
     );
     const offApps = window.kai.onApps((list) => setApps(list));
     const offSettings = window.kai.onSettings((s) => setSettings(s));
-    return () => { offStatus(); offApps(); offSettings(); };
+    const offUpdate = window.kai.onUpdate((u) => setUpdate(u));
+    return () => { offStatus(); offApps(); offSettings(); offUpdate(); };
   }, []);
 
   useEffect(() => {
@@ -161,6 +164,18 @@ export default function App() {
         </div>
       </header>
 
+      {update && update.available && (
+        <div className="update-bar">
+          <span>
+            Kai {update.version} is available. You are on {update.current}.
+          </span>
+          <button className="btn tiny primary" onClick={() => window.kai.openExternal(update.url)}>
+            Download
+          </button>
+          <button className="btn tiny ghost" onClick={() => setUpdate(null)}>Later</button>
+        </div>
+      )}
+
       <div className="body">
         <aside className="sidebar">
           {apps.length === 0 && (
@@ -249,7 +264,23 @@ export default function App() {
       </div>
 
       <footer className="statusbar">
-        <span>{meta ? `Electron ${meta.versions.electron} · Node ${meta.versions.node}` : ''}</span>
+        <span>
+          {meta ? `Kai ${meta.appVersion} · Electron ${meta.versions.electron} · Node ${meta.versions.node}` : ''}
+          <button
+            className="btn ghost tiny"
+            style={{ marginLeft: 8 }}
+            disabled={checking}
+            onClick={async () => {
+              setChecking(true);
+              const res = await window.kai.checkUpdate();
+              setChecking(false);
+              if (res.available) setUpdate(res);
+              else flash(res.error ? `Update check failed: ${res.error}` : 'You are on the latest version');
+            }}
+          >
+            {checking ? 'Checking' : 'Check for updates'}
+          </button>
+        </span>
         <span className="muted" title={meta?.configPath}>{meta?.configPath}</span>
       </footer>
 

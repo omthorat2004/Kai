@@ -63,6 +63,10 @@ const api = {
   onCleared: (cb) => subscribe('kai:cleared', cb),
   onApps: (cb) => subscribe('kai:apps', cb),
   onSettings: (cb) => subscribe('kai:settings', cb),
+  onUpdate: (cb) => subscribe('kai:update', cb),
+
+  checkUpdate: () => ipcRenderer.invoke('kai:checkUpdate'),
+  openExternal: (url) => ipcRenderer.invoke('kai:openExternal', url),
 };
 
 contextBridge.exposeInMainWorld('kai', api);
