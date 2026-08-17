@@ -199,3 +199,25 @@ docs/
 ## License
 
 MIT
+
+## Build size
+
+An Electron app carries its own Chromium, so the floor is high. What this
+project does about it:
+
+| Step | Installed | dmg |
+|---|---|---|
+| Default electron-builder output | 246 MB | 94 MB |
+| Trim docs, types and tests from bundled deps | 245 MB | 94 MB |
+| Prune 53 unused Chromium locale packs | 208 MB | 77 MB |
+
+`scripts/after-pack.js` does the locale pruning. The `electronLanguages` option
+alone is not enough: it only removes the app-level `.lproj` folders, which are
+already empty, while the real 39 MB sits inside
+`Electron Framework.framework/Versions/A/Resources`. The tradeoff is that
+Chromium's own context menus fall back to English.
+
+The remaining 208 MB is almost entirely Electron itself: a 152 MB framework
+binary, 25 MB of libraries, 10 MB of ICU data. Kai's own code is 1.2 MB of
+`app.asar`. Going lower means a custom Electron build or a different toolkit
+such as Tauri, which uses the system webview.

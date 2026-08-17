@@ -43,8 +43,14 @@
     "files": [
       "electron/**/*",
       "dist/**/*",
-      "package.json"
+      "package.json",
+      "!node_modules/**/*.{md,markdown,ts,map,flow}",
+      "!node_modules/**/{test,tests,__tests__,doc,docs,example,examples,.github,.idea}/**",
+      "!node_modules/**/{LICENSE,license,LICENSE.txt,AUTHORS,CHANGELOG.md,.editorconfig,.eslintrc,.npmignore}"
     ],
+    "compression": "maximum",
+    "asar": true,
+    "afterPack": "scripts/after-pack.js",
     "publish": [
       {
         "provider": "github",
@@ -64,10 +70,14 @@
       ],
       "category": "public.app-category.developer-tools",
       "artifactName": "Kai-${version}-${arch}.${ext}",
-      "identity": null
+      "identity": null,
+      "electronLanguages": [
+        "en-US"
+      ]
     },
     "dmg": {
-      "title": "Kai ${version}"
+      "title": "Kai ${version}",
+      "format": "UDBZ"
     },
     "win": {
       "target": [
