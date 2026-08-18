@@ -353,6 +353,8 @@ npm run build:win</pre>
   }
 
   function fillVersions(releases) {
+    // Keep whatever the visitor picked when a background refresh redraws.
+    var previous = select.value;
     select.innerHTML = '';
     releases.forEach(function (r, i) {
       var opt = document.createElement('option');
@@ -360,11 +362,14 @@ npm run build:win</pre>
       opt.textContent = r.tag_name + (i === 0 ? ' (latest)' : '');
       select.appendChild(opt);
     });
+    var keep = releases.filter(function (r) { return r.tag_name === previous; })[0];
+    select.value = keep ? previous : releases[0].tag_name;
+
     select.onchange = function () {
       var chosen = releases.filter(function (r) { return r.tag_name === select.value; })[0];
       if (chosen) render(chosen);
     };
-    render(releases[0]);
+    render(keep || releases[0]);
     total.textContent = plural(grandTotal(releases)) + ' all time';
   }
 
@@ -380,23 +385,39 @@ npm run build:win</pre>
     });
   }
 
+  // Stale while revalidate: paint the cached numbers instantly so the panel is
+  // never blank, then always go and check for fresher ones. Counts are only
+  // cached to avoid a flash of empty UI, never to avoid the network, otherwise
+  // a reload in the same tab shows a stale number with no way to refresh it.
   function load() {
     var cached = null;
     try { cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null'); } catch (e) {}
-    if (cached && Date.now() - cached.at < CACHE_MS && cached.data.length) {
+    var painted = false;
+    if (cached && cached.data && cached.data.length) {
       fillVersions(cached.data);
-      return;
+      painted = true;
     }
+
+    // GitHub caches this response for 60 seconds, so a fetch inside that
+    // window cannot return anything newer.
+    if (painted && Date.now() - cached.at < 60000) return;
+
     fetch(API, { headers: { Accept: 'application/vnd.github+json' } })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(function (data) {
         var releases = data.filter(function (r) { return !r.draft; });
-        if (!releases.length) return fallback();
+        if (!releases.length) throw new Error('no releases');
         try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data: releases })); } catch (e) {}
         fillVersions(releases);
       })
-      .catch(fallback);
+      .catch(function () { if (!painted) fallback(); });
   }
+
+  // Numbers lag by minutes on GitHub's side, so refresh when the tab is
+  // brought back into focus rather than making the visitor reload.
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) load();
+  });
 
   load();
 })();
