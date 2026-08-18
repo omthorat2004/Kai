@@ -1,0 +1,63 @@
+name: Build and attach installers
+
+# Runs on a version tag, or on demand against an existing tag.
+# Windows installers cannot be built on macOS, so the Windows runner is the
+# only way this repo gets an .exe.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and upload to, for example v0.1.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+            artifacts: 'release/*.dmg'
+          - os: windows-latest
+            platform: win
+            artifacts: 'release/*.exe'
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build renderer
+        run: npm run build:renderer
+
+      - name: Package ${{ matrix.platform }}
+        run: npx electron-builder --${{ matrix.platform }} --publish never
+        env:
+          # No signing certificates in CI. Unsigned builds are expected, see
+          # the Updating section of the README.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload installers to the release
+        shell: bash
+        run: gh release upload "${TAG}" ${{ matrix.artifacts }} --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
