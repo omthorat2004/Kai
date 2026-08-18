@@ -57,7 +57,12 @@ jobs:
 
       - name: Upload installers to the release
         shell: bash
-        run: gh release upload "${TAG}" ${{ matrix.artifacts }} --clobber
+        # Create the release if the tag was pushed without one, so a plain
+        # `git push --tags` is enough to publish.
+        run: |
+          gh release view "${TAG}" >/dev/null 2>&1 || \
+            gh release create "${TAG}" --title "Kai ${TAG#v}" --generate-notes
+          gh release upload "${TAG}" ${{ matrix.artifacts }} --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.inputs.tag || github.ref_name }}
