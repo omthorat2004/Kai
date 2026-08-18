@@ -76,7 +76,7 @@
       ]
     },
     "dmg": {
-      "title": "Kai ${version}",
+      "title": "Kai ${version} ${arch}",
       "format": "UDBZ"
     },
     "win": {

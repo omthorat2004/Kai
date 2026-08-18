@@ -127,6 +127,50 @@
 
   footer { padding: 36px 0 60px; color: var(--dim); font-size: 14px; }
   footer a { color: var(--green); }
+
+  /* download panel */
+  .downloads {
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+    padding: 18px;
+    max-width: 620px;
+  }
+  .dl-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .dl-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); font-weight: 700; }
+  #version-select {
+    font: inherit;
+    font-size: 14px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-strong);
+    background: var(--cream);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .dl-total { margin-left: auto; font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+  .dl-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .dl {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-strong);
+    background: var(--cream);
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color .15s, background .15s, transform .08s;
+  }
+  .dl:hover { border-color: var(--green); background: var(--cream-deep); }
+  .dl:active { transform: translateY(1px); }
+  .dl-os { font-weight: 700; font-size: 15px; }
+  .dl-arch { font-size: 12.5px; color: var(--dim); }
+  .dl-count { font-size: 11.5px; color: var(--green); font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .dl[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+  .dl-note { margin: 14px 0 0; font-size: 12.5px; color: var(--dim); }
+  .dl-note a { color: var(--green); }
 </style>
 </head>
 <body>
@@ -139,9 +183,38 @@
       Kai is a small desktop app that remembers your projects and their commands,
       so you stop opening terminals and retyping the same thing every morning.
     </p>
-    <div class="cta">
-      <a class="btn primary" href="https://github.com/omthorat2004/Kai">View on GitHub</a>
-      <a class="btn" href="https://github.com/omthorat2004/Kai#setup">Setup</a>
+    <div class="downloads" id="downloads">
+      <div class="dl-head">
+        <span class="dl-label">Download</span>
+        <select id="version-select" aria-label="Choose a version">
+          <option>loading…</option>
+        </select>
+        <span class="dl-total" id="dl-total"></span>
+      </div>
+
+      <div class="dl-grid">
+        <a class="dl" id="dl-arm64" href="#" data-kind="Apple Silicon">
+          <span class="dl-os">macOS</span>
+          <span class="dl-arch">Apple Silicon</span>
+          <span class="dl-count" data-count>&nbsp;</span>
+        </a>
+        <a class="dl" id="dl-x64" href="#" data-kind="Intel">
+          <span class="dl-os">macOS</span>
+          <span class="dl-arch">Intel</span>
+          <span class="dl-count" data-count>&nbsp;</span>
+        </a>
+        <a class="dl" id="dl-win" href="#" data-kind="Windows">
+          <span class="dl-os">Windows</span>
+          <span class="dl-arch">64-bit installer</span>
+          <span class="dl-count" data-count>&nbsp;</span>
+        </a>
+      </div>
+
+      <p class="dl-note" id="dl-note">
+        <a href="https://github.com/omthorat2004/Kai/releases">All releases</a> ·
+        <a href="https://github.com/omthorat2004/Kai">Source</a> ·
+        Unsigned build, on first launch right-click the app and choose Open.
+      </p>
     </div>
   </div>
 </header>
@@ -234,5 +307,99 @@ npm run build:win</pre>
   </div>
 </footer>
 
+<script>
+(function () {
+  var REPO = 'omthorat2004/Kai';
+  var API = 'https://api.github.com/repos/' + REPO + '/releases';
+  var RELEASES_PAGE = 'https://github.com/' + REPO + '/releases';
+  var CACHE_KEY = 'kai-releases';
+  var CACHE_MS = 10 * 60 * 1000;
+
+  var select = document.getElementById('version-select');
+  var total = document.getElementById('dl-total');
+  var targets = {
+    arm64: { el: document.getElementById('dl-arm64'), match: function (n) { return /arm64.*\.dmg$/i.test(n); } },
+    x64:   { el: document.getElementById('dl-x64'),   match: function (n) { return /x64.*\.dmg$/i.test(n); } },
+    win:   { el: document.getElementById('dl-win'),   match: function (n) { return /\.exe$/i.test(n); } }
+  };
+
+  function plural(n) { return n === 1 ? '1 download' : n.toLocaleString() + ' downloads'; }
+
+  // Downloads are counted by GitHub per release asset. Summing every asset of
+  // every release gives the all-time figure.
+  function grandTotal(releases) {
+    return releases.reduce(function (sum, r) {
+      return sum + (r.assets || []).reduce(function (s, a) { return s + a.download_count; }, 0);
+    }, 0);
+  }
+
+  function render(release) {
+    Object.keys(targets).forEach(function (key) {
+      var t = targets[key];
+      var asset = (release.assets || []).filter(function (a) { return t.match(a.name); })[0];
+      var countEl = t.el.querySelector('[data-count]');
+      if (asset) {
+        t.el.href = asset.browser_download_url;
+        t.el.removeAttribute('aria-disabled');
+        t.el.title = asset.name + ' · ' + (asset.size / 1048576).toFixed(0) + ' MB';
+        countEl.textContent = plural(asset.download_count);
+      } else {
+        t.el.href = RELEASES_PAGE;
+        t.el.setAttribute('aria-disabled', 'true');
+        t.el.title = 'Not published for this version';
+        countEl.textContent = 'not in this version';
+      }
+    });
+  }
+
+  function fillVersions(releases) {
+    select.innerHTML = '';
+    releases.forEach(function (r, i) {
+      var opt = document.createElement('option');
+      opt.value = r.tag_name;
+      opt.textContent = r.tag_name + (i === 0 ? ' (latest)' : '');
+      select.appendChild(opt);
+    });
+    select.onchange = function () {
+      var chosen = releases.filter(function (r) { return r.tag_name === select.value; })[0];
+      if (chosen) render(chosen);
+    };
+    render(releases[0]);
+    total.textContent = plural(grandTotal(releases)) + ' all time';
+  }
+
+  // Falling back to plain links matters: the API allows 60 unauthenticated
+  // requests per hour per IP, and the page must stay usable when that runs out.
+  function fallback() {
+    select.innerHTML = '<option>latest</option>';
+    total.textContent = '';
+    Object.keys(targets).forEach(function (key) {
+      var t = targets[key];
+      t.el.href = RELEASES_PAGE;
+      t.el.querySelector('[data-count]').textContent = 'view on GitHub';
+    });
+  }
+
+  function load() {
+    var cached = null;
+    try { cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null'); } catch (e) {}
+    if (cached && Date.now() - cached.at < CACHE_MS && cached.data.length) {
+      fillVersions(cached.data);
+      return;
+    }
+    fetch(API, { headers: { Accept: 'application/vnd.github+json' } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (data) {
+        var releases = data.filter(function (r) { return !r.draft; });
+        if (!releases.length) return fallback();
+        try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data: releases })); } catch (e) {}
+        fillVersions(releases);
+      })
+      .catch(fallback);
+  }
+
+  load();
+})();
+</script>
 </body>
 </html>
