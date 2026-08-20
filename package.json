@@ -1,7 +1,7 @@
 {
   "name": "kai",
   "productName": "Kai",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Kai, a personal dev-server launcher. Save your projects once, start them with one click.",
   "main": "electron/main.js",
   "license": "MIT",
