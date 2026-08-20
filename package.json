@@ -70,6 +70,7 @@
       ],
       "category": "public.app-category.developer-tools",
       "artifactName": "Kai-${version}-${arch}.${ext}",
+      "icon": "build/icon.icns",
       "identity": null,
       "electronLanguages": [
         "en-US"
@@ -83,7 +84,8 @@
       "target": [
         "nsis"
       ],
-      "artifactName": "Kai-Setup-${version}.${ext}"
+      "artifactName": "Kai-Setup-${version}.${ext}",
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,

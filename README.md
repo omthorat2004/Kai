@@ -1,3 +1,5 @@
+<img src="docs/icon.png" width="96" height="96" alt="Kai" />
+
 # Kai
 
 A personal dev-server launcher for macOS and Windows. Save your projects once,

@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Kai, a dev server launcher</title>
 <meta name="description" content="Kai is a personal dev-server launcher for macOS and Windows. Save your projects once, start them with one click." />
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="apple-touch-icon" href="icon.png" />
 <style>
   :root {
     --bg: #ffffff;
@@ -55,12 +57,11 @@
     margin-bottom: 22px;
   }
   .mark {
-    display: grid; place-items: center;
-    width: 42px; height: 42px;
-    border-radius: 11px;
-    background: linear-gradient(150deg, var(--green), #8fd18a);
-    color: var(--ink);
-    font-weight: 700; font-size: 21px;
+    width: 72px;
+    height: 72px;
+    display: block;
+    /* the artwork carries its own rounded tile and margin */
+    filter: drop-shadow(0 6px 14px rgba(29, 43, 33, .18));
   }
   h1 { font-size: 42px; line-height: 1.1; margin: 0 0 14px; letter-spacing: -0.5px; }
   .lede { font-size: 19px; color: var(--dim); margin: 0 0 30px; max-width: 44ch; }
@@ -177,7 +178,7 @@
 
 <header>
   <div class="wrap">
-    <div class="badge"><span class="mark">K</span></div>
+    <div class="badge"><img class="mark" src="icon.png" width="72" height="72" alt="Kai icon" /></div>
     <h1>Start your dev servers<br />with one click.</h1>
     <p class="lede">
       Kai is a small desktop app that remembers your projects and their commands,
