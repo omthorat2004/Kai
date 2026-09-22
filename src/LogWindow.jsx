@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import LogPane from './components/LogPane.jsx';
+import { applyTheme } from './theme.js';
 
 /**
  * The detached view: a second BrowserWindow showing exactly one app's logs,
@@ -26,6 +27,13 @@ export default function LogWindow({ appId }) {
     });
     return () => { offStatus(); offApps(); };
   }, [appId]);
+
+  // The detached window is a separate renderer, so it needs its own copy of
+  // the theme setting rather than inheriting App's state.
+  useEffect(() => {
+    (async () => applyTheme((await window.kai.settings.get()).theme))();
+    return window.kai.onSettings((s) => applyTheme(s.theme));
+  }, []);
 
   useEffect(() => {
     if (app) document.title = `${app.name} logs`;

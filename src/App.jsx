@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import AppForm from './components/AppForm.jsx';
 import LogPane from './components/LogPane.jsx';
 import { logStore } from './logStore.js';
+import { applyTheme } from './theme.js';
 
 /** 'YYYY-MM-DDTHH:mm' in local time, what <input type="datetime-local"> wants. */
 function toLocalInputValue(d) {
@@ -32,7 +33,7 @@ export default function App() {
   const [meta, setMeta] = useState(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState('');
-  const [settings, setSettings] = useState({ globalCwd: '' });
+  const [settings, setSettings] = useState({ globalCwd: '', theme: 'system' });
   const [showSettings, setShowSettings] = useState(false);
   const [update, setUpdate] = useState(null);
   const [checking, setChecking] = useState(false);
@@ -86,6 +87,10 @@ export default function App() {
   useEffect(() => {
     if (selectedId) window.kai.ui.set({ selectedId });
   }, [selectedId]);
+
+  useEffect(() => {
+    applyTheme(settings.theme);
+  }, [settings.theme]);
 
   const selected = useMemo(
     () => apps.find((a) => a.id === selectedId) || null,
@@ -226,7 +231,7 @@ export default function App() {
           <button className="btn" onClick={startAll} disabled={busy || !apps.length}>Start all</button>
           <button className="btn" onClick={stopAll} disabled={busy || !runningCount}>Stop all</button>
           <button className="btn" onClick={restartAll} disabled={busy || !runningCount}>Restart all</button>
-          <button className="btn" onClick={() => setShowSettings(true)}>Global folder</button>
+          <button className="btn" onClick={() => setShowSettings(true)}>Settings</button>
           <button className="btn primary" onClick={() => setEditing({})}>Add app</button>
         </div>
       </header>
@@ -381,10 +386,26 @@ export default function App() {
       {showSettings && (
         <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setShowSettings(false)}>
           <div className="modal small">
-            <h2>Global folder</h2>
+            <h2>Settings</h2>
+
+            <label>
+              <span>Theme</span>
+              <select
+                value={settings.theme || 'system'}
+                onChange={async (e) => {
+                  const next = await window.kai.settings.set({ theme: e.target.value });
+                  setSettings(next);
+                }}
+              >
+                <option value="system">Match system</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </label>
+
             <p className="muted">
-              Where an app runs when it has no folder of its own. Use it for commands
-              that are not tied to a project.
+              Global folder: where an app runs when it has no folder of its own. Use it
+              for commands that are not tied to a project.
             </p>
             <div className="row">
               <input
