@@ -30,14 +30,14 @@ Grab the latest build from the
 - Apple Silicon: `Kai-<version>-arm64.dmg`
 - Intel Mac: `Kai-<version>-x64.dmg`
 - Windows: `Kai-Setup-<version>.exe`
-- Linux: `Kai-<version>-x64.AppImage`
+- Linux: `Kai-<version>-x86_64.AppImage`
 
 Open the dmg and drag Kai to Applications, run the Windows installer, or on
 Linux make the AppImage executable and run it directly:
 
 ```bash
-chmod +x Kai-<version>-x64.AppImage
-./Kai-<version>-x64.AppImage
+chmod +x Kai-<version>-x86_64.AppImage
+./Kai-<version>-x86_64.AppImage
 ```
 
 **First launch on macOS.** These builds are not signed with an Apple Developer
