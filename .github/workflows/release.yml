@@ -2,7 +2,8 @@ name: Build and attach installers
 
 # Runs on a version tag, or on demand against an existing tag.
 # Windows installers cannot be built on macOS, so the Windows runner is the
-# only way this repo gets an .exe.
+# only way this repo gets an .exe. Linux gets its own runner too, mostly so
+# the AppImage is a native x64 build rather than a cross-compile.
 
 on:
   push:
@@ -29,6 +30,9 @@ jobs:
           - os: windows-latest
             platform: win
             artifacts: 'release/*.exe'
+          - os: ubuntu-latest
+            platform: linux
+            artifacts: 'release/*.AppImage'
 
     runs-on: ${{ matrix.os }}
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Kai, a dev server launcher</title>
-<meta name="description" content="Kai is a personal dev-server launcher for macOS and Windows. Save your projects once, start them with one click." />
+<meta name="description" content="Kai is a personal dev-server launcher for macOS, Windows and Linux. Save your projects once, start them with one click." />
 <link rel="icon" type="image/png" href="favicon.png" />
 <link rel="apple-touch-icon" href="icon.png" />
 <style>
@@ -209,6 +209,11 @@
           <span class="dl-arch">64-bit installer</span>
           <span class="dl-count" data-count>&nbsp;</span>
         </a>
+        <a class="dl" id="dl-linux" href="#" data-kind="Linux">
+          <span class="dl-os">Linux</span>
+          <span class="dl-arch">AppImage, 64-bit</span>
+          <span class="dl-count" data-count>&nbsp;</span>
+        </a>
       </div>
 
       <p class="dl-note" id="dl-note">
@@ -320,7 +325,8 @@ npm run build:win</pre>
   var targets = {
     arm64: { el: document.getElementById('dl-arm64'), match: function (n) { return /arm64.*\.dmg$/i.test(n); } },
     x64:   { el: document.getElementById('dl-x64'),   match: function (n) { return /x64.*\.dmg$/i.test(n); } },
-    win:   { el: document.getElementById('dl-win'),   match: function (n) { return /\.exe$/i.test(n); } }
+    win:   { el: document.getElementById('dl-win'),   match: function (n) { return /\.exe$/i.test(n); } },
+    linux: { el: document.getElementById('dl-linux'), match: function (n) { return /\.AppImage$/i.test(n); } }
   };
 
   function plural(n) { return n === 1 ? '1 download' : n.toLocaleString() + ' downloads'; }

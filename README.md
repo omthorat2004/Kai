@@ -2,9 +2,9 @@
 
 # Kai
 
-A personal dev-server launcher for macOS and Windows. Save your projects once,
-then start them with one click instead of opening a terminal and typing the same
-command again.
+A personal dev-server launcher for macOS, Windows and Linux. Save your projects
+once, then start them with one click instead of opening a terminal and typing
+the same command again.
 
 Built with Electron, React and Vite. No component library, plain CSS.
 
@@ -29,8 +29,16 @@ Grab the latest build from the
 
 - Apple Silicon: `Kai-<version>-arm64.dmg`
 - Intel Mac: `Kai-<version>-x64.dmg`
+- Windows: `Kai-Setup-<version>.exe`
+- Linux: `Kai-<version>-x64.AppImage`
 
-Open the dmg and drag Kai to Applications.
+Open the dmg and drag Kai to Applications, run the Windows installer, or on
+Linux make the AppImage executable and run it directly:
+
+```bash
+chmod +x Kai-<version>-x64.AppImage
+./Kai-<version>-x64.AppImage
+```
 
 **First launch on macOS.** These builds are not signed with an Apple Developer
 ID, so Gatekeeper will refuse the first open with a warning that the app cannot
@@ -81,15 +89,17 @@ npm start
 ## Packaging
 
 ```bash
-npm run build:mac   # dmg
-npm run build:win   # nsis installer
-npm run build       # current platform
+npm run build:mac     # dmg
+npm run build:win     # nsis installer
+npm run build:linux   # AppImage
+npm run build         # current platform
 ```
 
 Output lands in `release/`. The mac target builds both arm64 and x64 dmgs.
-Windows installers must be built on Windows, or in a Windows CI runner. Add your
-own icons at `build/icon.icns` and `build/icon.ico` to replace the Electron
-defaults.
+Windows installers must be built on Windows, or in a Windows CI runner; the
+Linux AppImage should likewise be built on Linux so its arch matches the
+runner. Add your own icons at `build/icon.icns`, `build/icon.ico` and
+`build/icon.png` to replace the Electron defaults.
 
 To cut a new release: bump `version` in `package.json`, build, then upload the
 artifacts and the installed copies will see the update on their next launch.
