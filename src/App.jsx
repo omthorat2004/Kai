@@ -3,6 +3,12 @@ import AppForm from './components/AppForm.jsx';
 import LogPane from './components/LogPane.jsx';
 import { logStore } from './logStore.js';
 
+/** 'YYYY-MM-DDTHH:mm' in local time, what <input type="datetime-local"> wants. */
+function toLocalInputValue(d) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function statusLabel(s) {
   if (!s) return 'stopped';
   switch (s.status) {
@@ -30,6 +36,10 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [update, setUpdate] = useState(null);
   const [checking, setChecking] = useState(false);
+  const [schedules, setSchedules] = useState([]);
+  const [scheduling, setScheduling] = useState(null); // null | app
+  const [scheduleAction, setScheduleAction] = useState('start');
+  const [scheduleAt, setScheduleAt] = useState('');
 
   const flash = useCallback((msg) => {
     setToast(msg);
@@ -44,15 +54,17 @@ export default function App() {
   // Initial load and persisted selection.
   useEffect(() => {
     (async () => {
-      const [list, ui, m, s] = await Promise.all([
+      const [list, ui, m, s, sch] = await Promise.all([
         window.kai.apps.list(),
         window.kai.ui.get(),
         window.kai.meta(),
         window.kai.settings.get(),
+        window.kai.schedules.list(),
       ]);
       setApps(list);
       setMeta(m);
       setSettings(s);
+      setSchedules(sch);
       const wanted = list.find((a) => a.id === ui.selectedId) || list[0];
       setSelectedId(wanted ? wanted.id : null);
       await refreshStatuses();
@@ -67,7 +79,8 @@ export default function App() {
     const offApps = window.kai.onApps((list) => setApps(list));
     const offSettings = window.kai.onSettings((s) => setSettings(s));
     const offUpdate = window.kai.onUpdate((u) => setUpdate(u));
-    return () => { offStatus(); offApps(); offSettings(); offUpdate(); };
+    const offSchedules = window.kai.onSchedules((list) => setSchedules(list));
+    return () => { offStatus(); offApps(); offSettings(); offUpdate(); offSchedules(); };
   }, []);
 
   useEffect(() => {
@@ -115,6 +128,12 @@ export default function App() {
     refreshStatuses();
   };
 
+  const restart = async (app) => {
+    const res = await window.kai.restart(app.id);
+    if (res && res.ok === false) flash(res.error);
+    refreshStatuses();
+  };
+
   const startAll = async () => {
     setBusy(true);
     const results = await window.kai.startAll();
@@ -129,6 +148,53 @@ export default function App() {
     await window.kai.stopAll();
     await refreshStatuses();
     setBusy(false);
+  };
+
+  const restartAll = async () => {
+    setBusy(true);
+    const results = await window.kai.restartAll();
+    const failed = (results || []).filter((r) => r.ok === false);
+    if (failed.length) flash(`${failed.length} app(s) could not restart`);
+    await refreshStatuses();
+    setBusy(false);
+  };
+
+  const pendingScheduleCount = useMemo(() => {
+    const map = {};
+    for (const s of schedules) {
+      if (s.status === 'pending') map[s.appId] = (map[s.appId] || 0) + 1;
+    }
+    return map;
+  }, [schedules]);
+
+  const appSchedules = useMemo(
+    () => schedules
+      .filter((s) => s.appId === scheduling?.id && s.status === 'pending')
+      .sort((a, b) => a.at - b.at),
+    [schedules, scheduling]
+  );
+
+  // Defaults to whichever action the app isn't doing right now, same idea as
+  // the Start/Stop toggle button.
+  const openSchedule = (app) => {
+    setScheduleAction(isRunning(app.id) ? 'stop' : 'start');
+    const dt = new Date(Date.now() + 5 * 60 * 1000);
+    dt.setSeconds(0, 0);
+    setScheduleAt(toLocalInputValue(dt));
+    setScheduling(app);
+  };
+
+  const createSchedule = async () => {
+    if (!scheduling || !scheduleAt) return;
+    const at = new Date(scheduleAt).getTime();
+    if (!Number.isFinite(at)) return;
+    const res = await window.kai.schedules.create({ appId: scheduling.id, action: scheduleAction, at });
+    if (res && res.ok === false) flash(res.error);
+    else flash(`${scheduleAction === 'start' ? 'Start' : 'Stop'} scheduled for ${new Date(at).toLocaleString()}`);
+  };
+
+  const cancelSchedule = async (id) => {
+    await window.kai.schedules.cancel(id);
   };
 
   const save = async (form) => {
@@ -159,6 +225,7 @@ export default function App() {
         <div className="titlebar-actions">
           <button className="btn" onClick={startAll} disabled={busy || !apps.length}>Start all</button>
           <button className="btn" onClick={stopAll} disabled={busy || !runningCount}>Stop all</button>
+          <button className="btn" onClick={restartAll} disabled={busy || !runningCount}>Restart all</button>
           <button className="btn" onClick={() => setShowSettings(true)}>Global folder</button>
           <button className="btn primary" onClick={() => setEditing({})}>Add app</button>
         </div>
@@ -207,6 +274,14 @@ export default function App() {
                   >
                     Stop
                   </button>
+                  <button
+                    className="btn ghost tiny"
+                    disabled={!runningHere}
+                    title={`Restart every sub-application in ${groupName || 'Standalone'}`}
+                    onClick={() => window.kai.restartGroup(groupName).then(refreshStatuses)}
+                  >
+                    Restart
+                  </button>
                 </div>
 
           {members.map((app) => {
@@ -222,6 +297,11 @@ export default function App() {
                   <span className={`dot dot-${st?.status || 'stopped'}`} />
                   <span className="app-name">{app.name}</span>
                   {app.autostart && <span className="tag" title="Starts with Kai">auto</span>}
+                  {pendingScheduleCount[app.id] > 0 && (
+                    <span className="tag" title="Has a scheduled start/stop">
+                      {pendingScheduleCount[app.id]} scheduled
+                    </span>
+                  )}
                 </div>
                 <div className="app-cmd" title={app.command}>{app.command}</div>
                 <div className="app-cwd" title={app.cwd || settings.globalCwd}>
@@ -235,8 +315,12 @@ export default function App() {
                   >
                     {running ? 'Stop' : 'Start'}
                   </button>
-                  <button className="btn ghost" onClick={() => setEditing(app)}>Edit</button>
-                  <button className="btn ghost" onClick={() => setConfirmDelete(app)}>Delete</button>
+                  <button className="btn ghost" onClick={() => restart(app)}>Restart</button>
+                  <button className="btn ghost" onClick={() => openSchedule(app)}>Schedule</button>
+                </div>
+                <div className="app-card-actions secondary" onClick={(e) => e.stopPropagation()}>
+                  <button className="btn ghost tiny" onClick={() => setEditing(app)}>Edit</button>
+                  <button className="btn ghost tiny" onClick={() => setConfirmDelete(app)}>Delete</button>
                 </div>
               </div>
             );
@@ -328,6 +412,46 @@ export default function App() {
                 }}
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {scheduling && (
+        <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setScheduling(null)}>
+          <div className="modal small">
+            <h2>Schedule {scheduling.name}</h2>
+            <p className="muted">
+              Currently {isRunning(scheduling.id) ? 'running' : 'stopped'}.
+            </p>
+            <div className="row">
+              <select value={scheduleAction} onChange={(e) => setScheduleAction(e.target.value)}>
+                <option value="start">Start</option>
+                <option value="stop">Stop</option>
+              </select>
+              <input
+                type="datetime-local"
+                value={scheduleAt}
+                onChange={(e) => setScheduleAt(e.target.value)}
+              />
+            </div>
+
+            {appSchedules.length > 0 && (
+              <ul className="schedule-list">
+                {appSchedules.map((s) => (
+                  <li key={s.id}>
+                    <span>{s.action === 'start' ? 'Start' : 'Stop'} · {new Date(s.at).toLocaleString()}</span>
+                    <button className="btn ghost tiny" onClick={() => cancelSchedule(s.id)}>Cancel</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="modal-actions">
+              <button className="btn ghost" onClick={() => setScheduling(null)}>Close</button>
+              <button className="btn primary" onClick={createSchedule} disabled={!scheduleAt}>
+                Schedule
               </button>
             </div>
           </div>

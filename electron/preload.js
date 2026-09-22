@@ -34,11 +34,20 @@ const api = {
 
   start: (id) => ipcRenderer.invoke('kai:start', id),
   stop: (id) => ipcRenderer.invoke('kai:stop', id),
+  restart: (id) => ipcRenderer.invoke('kai:restart', id),
   startAll: () => ipcRenderer.invoke('kai:startAll'),
   stopAll: () => ipcRenderer.invoke('kai:stopAll'),
+  restartAll: () => ipcRenderer.invoke('kai:restartAll'),
   startGroup: (group) => ipcRenderer.invoke('kai:startGroup', group),
   stopGroup: (group) => ipcRenderer.invoke('kai:stopGroup', group),
+  restartGroup: (group) => ipcRenderer.invoke('kai:restartGroup', group),
   statuses: () => ipcRenderer.invoke('kai:statuses'),
+
+  schedules: {
+    list: () => ipcRenderer.invoke('kai:schedules:list'),
+    create: (input) => ipcRenderer.invoke('kai:schedules:create', input),
+    cancel: (id) => ipcRenderer.invoke('kai:schedules:cancel', id),
+  },
 
   settings: {
     get: () => ipcRenderer.invoke('kai:settings:get'),
@@ -64,6 +73,7 @@ const api = {
   onApps: (cb) => subscribe('kai:apps', cb),
   onSettings: (cb) => subscribe('kai:settings', cb),
   onUpdate: (cb) => subscribe('kai:update', cb),
+  onSchedules: (cb) => subscribe('kai:schedules', cb),
 
   checkUpdate: () => ipcRenderer.invoke('kai:checkUpdate'),
   openExternal: (url) => ipcRenderer.invoke('kai:openExternal', url),

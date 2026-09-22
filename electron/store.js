@@ -15,6 +15,7 @@ const store = new Store({
     // project, so "global" commands need no folder of their own.
     settings: { globalCwd: os.homedir() },
     ui: { selectedId: null, windowBounds: { width: 1120, height: 720 } },
+    schedules: [],
   },
 });
 
@@ -101,6 +102,54 @@ const api = {
 
   setUi(patch) {
     store.set('ui', { ...api.getUi(), ...patch });
+  },
+
+  // ------------------------------------------------------------ schedules
+
+  listSchedules() {
+    const list = store.get('schedules', []);
+    return Array.isArray(list) ? list : [];
+  },
+
+  getSchedule(id) {
+    return api.listSchedules().find((s) => s.id === id) || null;
+  },
+
+  /** @param {{appId:string, action:'start'|'stop', at:number}} input */
+  addSchedule(input) {
+    const record = {
+      id: crypto.randomUUID(),
+      appId: input.appId,
+      action: input.action === 'stop' ? 'stop' : 'start',
+      at: Number(input.at),
+      status: 'pending', // pending | done | skipped | cancelled | failed
+      createdAt: Date.now(),
+      firedAt: null,
+      error: null,
+    };
+    const list = api.listSchedules();
+    list.push(record);
+    store.set('schedules', list);
+    return record;
+  },
+
+  updateSchedule(id, patch) {
+    const list = api.listSchedules();
+    const idx = list.findIndex((s) => s.id === id);
+    if (idx < 0) return null;
+    list[idx] = { ...list[idx], ...patch };
+    store.set('schedules', list);
+    return list[idx];
+  },
+
+  removeSchedule(id) {
+    store.set('schedules', api.listSchedules().filter((s) => s.id !== id));
+    return true;
+  },
+
+  /** Dropped along with the app they belong to. */
+  removeSchedulesForApp(appId) {
+    store.set('schedules', api.listSchedules().filter((s) => s.appId !== appId));
   },
 
   path: store.path,

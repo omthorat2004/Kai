@@ -4,6 +4,7 @@ const path = require('path');
 const { app, BrowserWindow, ipcMain, dialog, clipboard, shell } = require('electron');
 const store = require('./store');
 const { ProcessManager } = require('./process-manager');
+const { Scheduler } = require('./scheduler');
 const { checkForUpdate } = require('./updater');
 
 const DEV_SERVER = process.env.KAI_DEV_SERVER || null;
@@ -103,6 +104,37 @@ function startApp(id) {
   return { ok: true, status: pm.statusOf(id) };
 }
 
+async function restartApp(id) {
+  if (pm.isRunning(id)) await pm.stop(id);
+  return startApp(id);
+}
+
+// ------------------------------------------------------------- scheduling
+
+/** Run a scheduled start/stop, skipping no-ops if the app is already there. */
+async function runScheduledAction(schedule) {
+  const cfg = store.get(schedule.appId);
+  if (!cfg) throw new Error('App no longer exists');
+  const running = pm.isRunning(schedule.appId);
+  if (schedule.action === 'start') {
+    if (running) return;
+    const res = startApp(schedule.appId);
+    if (res.ok === false) throw new Error(res.error);
+  } else {
+    if (!running) return;
+    await pm.stop(schedule.appId);
+  }
+}
+
+const scheduler = new Scheduler({
+  store,
+  onFire: async (schedule) => {
+    await runScheduledAction(schedule);
+    broadcast('kai:schedules', store.listSchedules());
+    broadcast('kai:status', pm.statusOf(schedule.appId));
+  },
+});
+
 // ------------------------------------------------------------------- IPC
 
 ipcMain.handle('kai:apps:list', () => store.list());
@@ -116,10 +148,15 @@ ipcMain.handle('kai:apps:save', (_e, input) => {
 ipcMain.handle('kai:apps:remove', async (_e, id) => {
   if (pm.isRunning(id)) await pm.stop(id);
   pm.forget(id);
+  for (const s of store.listSchedules()) {
+    if (s.appId === id && s.status === 'pending') scheduler.cancel(s.id);
+  }
+  store.removeSchedulesForApp(id);
   store.remove(id);
   const win = logWindows.get(id);
   if (win && !win.isDestroyed()) win.close();
   broadcast('kai:apps', store.list());
+  broadcast('kai:schedules', store.listSchedules());
   return true;
 });
 
@@ -147,6 +184,11 @@ ipcMain.handle('kai:stop', async (_e, id) => {
   return { ok: true, status: pm.statusOf(id) };
 });
 
+ipcMain.handle('kai:restart', async (_e, id) => {
+  const res = await restartApp(id);
+  return res;
+});
+
 ipcMain.handle('kai:startAll', () => {
   const results = store.list().map((a) => ({ id: a.id, ...startApp(a.id) }));
   return results;
@@ -155,6 +197,12 @@ ipcMain.handle('kai:startAll', () => {
 ipcMain.handle('kai:stopAll', async () => {
   await pm.stopAll();
   return { ok: true };
+});
+
+ipcMain.handle('kai:restartAll', async () => {
+  const results = [];
+  for (const a of store.list()) results.push({ id: a.id, ...(await restartApp(a.id)) });
+  return results;
 });
 
 // A "group" is one application made of several sub-applications.
@@ -167,6 +215,32 @@ ipcMain.handle('kai:stopGroup', async (_e, group) => {
   const members = store.list().filter((a) => (a.group || '') === (group || ''));
   await Promise.all(members.map((a) => pm.stop(a.id)));
   return { ok: true };
+});
+
+ipcMain.handle('kai:restartGroup', async (_e, group) => {
+  const members = store.list().filter((a) => (a.group || '') === (group || ''));
+  const results = [];
+  for (const a of members) results.push({ id: a.id, ...(await restartApp(a.id)) });
+  return results;
+});
+
+ipcMain.handle('kai:schedules:list', () => store.listSchedules());
+
+ipcMain.handle('kai:schedules:create', (_e, input) => {
+  const cfg = store.get(input?.appId);
+  if (!cfg) return { ok: false, error: 'No such app' };
+  const at = Number(input?.at);
+  if (!Number.isFinite(at) || at <= Date.now()) return { ok: false, error: 'Pick a time in the future' };
+  const record = store.addSchedule({ appId: input.appId, action: input.action, at });
+  scheduler.add(record);
+  broadcast('kai:schedules', store.listSchedules());
+  return { ok: true, schedule: record };
+});
+
+ipcMain.handle('kai:schedules:cancel', (_e, id) => {
+  scheduler.cancel(id);
+  broadcast('kai:schedules', store.listSchedules());
+  return true;
 });
 
 ipcMain.handle('kai:checkUpdate', () => checkForUpdate(app.getVersion()));
@@ -224,6 +298,8 @@ if (!app.requestSingleInstanceLock()) {
     for (const a of store.list()) {
       if (a.autostart) startApp(a.id);
     }
+
+    scheduler.start();
 
     // Quiet background check a few seconds after launch. Failure is silent:
     // being offline is not an error worth interrupting anyone over.
