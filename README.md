@@ -35,8 +35,8 @@ Open the dmg and drag Kai to Applications.
 **First launch on macOS.** These builds are not signed with an Apple Developer
 ID, so Gatekeeper will refuse the first open with a warning that the app cannot
 be checked for malicious software. Right-click the app and choose **Open**, then
-confirm. You only do this once. If macOS insists the app is damaged, clear the
-quarantine flag:
+confirm. You only do this once. If macOS still insists the app is damaged, clear
+the quarantine flag:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/Kai.app

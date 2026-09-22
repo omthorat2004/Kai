@@ -11,6 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const KEEP = new Set(['en.lproj', 'en_GB.lproj', 'en-GB.lproj', 'en_US.lproj', 'en-US.lproj']);
 
@@ -56,6 +57,18 @@ exports.default = async function afterPack(context) {
     );
     freed += pruneLproj(resources);
     freed += pruneLproj(framework);
+
+    // Electron ships each build with an ad-hoc signature that seals the
+    // Resources it was signed with. Deleting locale files above without
+    // re-signing leaves that seal pointing at files that no longer exist, so
+    // Gatekeeper's later resource check fails and macOS reports the app as
+    // "damaged" the moment it is downloaded (quarantined) and opened. There
+    // is no paid Apple Developer ID cert here, but re-signing ad-hoc
+    // (`--sign -`) after pruning keeps the seal consistent with the actual
+    // contents, which is enough for Gatekeeper's integrity check to pass.
+    const appPath = path.join(appOutDir, `${appName}.app`);
+    execFileSync('codesign', ['--force', '--deep', '--sign', '-', appPath], { stdio: 'inherit' });
+    console.log('  • re-signed app bundle ad-hoc after pruning locales');
   } else {
     // Windows and Linux keep locales as flat .pak files.
     const localesDir = path.join(appOutDir, 'locales');
