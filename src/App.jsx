@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import AppForm from './components/AppForm.jsx';
 import LogPane from './components/LogPane.jsx';
 import { logStore } from './logStore.js';
-import { applyTheme } from './theme.js';
+import { applyTheme, applyAccent } from './theme.js';
 
 /** 'YYYY-MM-DDTHH:mm' in local time, what <input type="datetime-local"> wants. */
 function toLocalInputValue(d) {
@@ -33,7 +33,7 @@ export default function App() {
   const [meta, setMeta] = useState(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState('');
-  const [settings, setSettings] = useState({ globalCwd: '', theme: 'system' });
+  const [settings, setSettings] = useState({ globalCwd: '', theme: 'system', accent: 'green' });
   const [showSettings, setShowSettings] = useState(false);
   const [update, setUpdate] = useState(null);
   const [checking, setChecking] = useState(false);
@@ -91,6 +91,10 @@ export default function App() {
   useEffect(() => {
     applyTheme(settings.theme);
   }, [settings.theme]);
+
+  useEffect(() => {
+    applyAccent(settings.accent);
+  }, [settings.accent]);
 
   const selected = useMemo(
     () => apps.find((a) => a.id === selectedId) || null,
@@ -401,6 +405,26 @@ export default function App() {
                 <option value="light">Light</option>
                 <option value="dark">Dark</option>
               </select>
+            </label>
+
+            <label>
+              <span>Accent color</span>
+              <div className="accent-row" role="radiogroup" aria-label="Accent color">
+                {['green', 'blue', 'violet'].map((a) => (
+                  <button
+                    key={a}
+                    type="button"
+                    className={`accent-swatch accent-${a} ${(settings.accent || 'green') === a ? 'selected' : ''}`}
+                    role="radio"
+                    aria-checked={(settings.accent || 'green') === a}
+                    title={a.charAt(0).toUpperCase() + a.slice(1)}
+                    onClick={async () => {
+                      const next = await window.kai.settings.set({ accent: a });
+                      setSettings(next);
+                    }}
+                  />
+                ))}
+              </div>
             </label>
 
             <p className="muted">

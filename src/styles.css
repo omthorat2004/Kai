@@ -75,6 +75,57 @@
   --shadow: rgba(0, 0, 0, 0.5);
 }
 
+/* -------------------------------------------------------- accent presets
+   Only the brand hue changes; surfaces, text and status colours (red/amber)
+   stay put so every preset still passes the same contrast checks as the
+   default green. Each preset needs a light pair and a dark pair, the dark
+   one applying either by OS preference (System) or an explicit Dark choice,
+   same split as the base theme above. A single attribute selector on :root
+   already outranks the plain theme blocks in specificity, so these win
+   without needing !important or later source order. */
+
+:root[data-accent="blue"] {
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-ink: #ffffff;
+  --green: #2563eb;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-accent="blue"] {
+    --accent: #7db8ff;
+    --accent-hover: #99c8ff;
+    --accent-ink: #071b33;
+    --green: #7db8ff;
+  }
+}
+:root[data-theme="dark"][data-accent="blue"] {
+  --accent: #7db8ff;
+  --accent-hover: #99c8ff;
+  --accent-ink: #071b33;
+  --green: #7db8ff;
+}
+
+:root[data-accent="violet"] {
+  --accent: #7c3aed;
+  --accent-hover: #6d28d9;
+  --accent-ink: #ffffff;
+  --green: #7c3aed;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-accent="violet"] {
+    --accent: #c9a8ff;
+    --accent-hover: #d9c2ff;
+    --accent-ink: #1d1033;
+    --green: #c9a8ff;
+  }
+}
+:root[data-theme="dark"][data-accent="violet"] {
+  --accent: #c9a8ff;
+  --accent-hover: #d9c2ff;
+  --accent-ink: #1d1033;
+  --green: #c9a8ff;
+}
+
 * { box-sizing: border-box; }
 
 html, body, #root { height: 100%; margin: 0; }
@@ -414,6 +465,25 @@ button, input { font-family: inherit; font-size: inherit; color: inherit; }
   border: 1px solid var(--border-strong);
   background: var(--bg);
 }
+
+.accent-row { display: flex; gap: 10px; }
+.accent-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.12s;
+}
+.accent-swatch:hover { transform: scale(1.08); }
+.accent-swatch.selected {
+  border-color: var(--bg);
+  box-shadow: 0 0 0 2px var(--text);
+}
+.accent-green { background: linear-gradient(135deg, #2e8b57, #5ad18b); }
+.accent-blue { background: linear-gradient(135deg, #2563eb, #7db8ff); }
+.accent-violet { background: linear-gradient(135deg, #7c3aed, #c9a8ff); }
 
 .row { display: flex; gap: 6px; }
 .row input { flex: 1; min-width: 0; }

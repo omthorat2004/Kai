@@ -13,7 +13,7 @@ const store = new Store({
     apps: [],
     // globalCwd is the working folder for entries that are not tied to a
     // project, so "global" commands need no folder of their own.
-    settings: { globalCwd: os.homedir(), theme: 'system' },
+    settings: { globalCwd: os.homedir(), theme: 'system', accent: 'green' },
     ui: { selectedId: null, windowBounds: { width: 1120, height: 720 } },
     schedules: [],
   },
@@ -86,6 +86,7 @@ const api = {
     return {
       globalCwd: s.globalCwd || os.homedir(),
       theme: ['light', 'dark'].includes(s.theme) ? s.theme : 'system',
+      accent: ['blue', 'violet'].includes(s.accent) ? s.accent : 'green',
     };
   },
 
